@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using TokenProvider.Infrastructure.Models;
 
 namespace TokenProvider.Functions;
 
@@ -16,8 +17,14 @@ public class GenerateToken
 
     [Function("GenerateToken")]
 
-    public IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req)
+    public IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = "token/generate")] HttpRequest req, [FromBody] TokenRequest tokenRequest)
     {
+
+        if (tokenRequest.UserId == null || tokenRequest.Email == null)
+            return new BadRequestObjectResult(new { Error = "Please provide a valid email" });
+        
+
+        
         return new OkObjectResult("");
     }
 }

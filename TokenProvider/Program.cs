@@ -1,6 +1,8 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using TokenProvider.Infrastructure.Data.Contexts;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
@@ -8,6 +10,11 @@ var host = new HostBuilder()
     {
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
+
+        services.AddDbContextFactory<DataContext>(options =>
+        {
+            options.UseSqlServer(Environment.GetEnvironmentVariable("TOKEN_DATABASE"));
+        });
     })
     .Build();
 
