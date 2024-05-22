@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
@@ -7,20 +8,15 @@ using TokenProvider.Infrastructure.Services;
 
 namespace TokenProvider.Functions;
 
-public class GenerateToken
+public class GenerateToken(ILogger<GenerateToken> logger, IRefreshTokenService refreshTokenService, ITokenGenerator tokenGenerator)
 {
-    private readonly ILogger<GenerateToken> _logger;
-    private readonly IRefreshTokenService _refreshTokenService;
-
-    public GenerateToken(ILogger<GenerateToken> logger, IRefreshTokenService refreshTokenService)
-    {
-        _logger = logger;
-        _refreshTokenService = refreshTokenService;
-    }
+    private readonly ILogger<GenerateToken> _logger = logger;
+    private readonly IRefreshTokenService _refreshTokenService = refreshTokenService;
+    private readonly ITokenGenerator _tokenGenerator = tokenGenerator;
 
     [Function("GenerateToken")]
 
-    public async IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = "token/generate")] HttpRequest req, [FromBody] TokenRequest tokenRequest)
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = "token/generate")] HttpRequest req, [FromBody] TokenRequest tokenRequest)
     {
 
         if (tokenRequest.UserId == null || tokenRequest.Email == null)
@@ -30,6 +26,7 @@ public class GenerateToken
         try
         {
             RefreshTokenResult refreshTokenResult = null!;
+            AccessTokenResult accessTokenResult = null!;
             using var ctsTimeOut = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctsTimeOut.Token, req.HttpContext.RequestAborted);
 
@@ -39,13 +36,19 @@ public class GenerateToken
 
             if ( refreshTokenResult == null ||refreshTokenResult.ExpiryDate < DateTime.Now.AddDays(1))
                 refreshTokenResult = await _tokenGenerator.GenerateRefreshTokenAsync(tokenRequest.UserId, cts.Token);
+
+            accessTokenResult = _tokenGenerator.GenerateAccessToken(tokenRequest, refreshTokenResult.Token);
+            if (accessTokenResult != null && accessTokenResult.Token != null && refreshTokenResult.Token != null && refreshTokenResult.CookieOptions != null)
+            {
+                req.HttpContext.Response.Cookies.Append("refreshToken", refreshTokenResult.Token, refreshTokenResult.CookieOptions);
+                return new OkObjectResult(new { AccessToken = accessTokenResult.Token, RefreshToken = refreshTokenResult.Token });
+            }
+                return new ObjectResult(new { Error = "error generating tokens" }) { StatusCode = 500 };
+
         }catch 
         {
 
         }
-        
-
-        
-        return new OkObjectResult("");
+         return new OkObjectResult("");
     }
 }
