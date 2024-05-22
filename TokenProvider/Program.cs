@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using TokenProvider.Infrastructure.Data.Contexts;
+using TokenProvider.Infrastructure.Services;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
@@ -15,6 +16,8 @@ var host = new HostBuilder()
         {
             options.UseSqlServer(Environment.GetEnvironmentVariable("TOKEN_DATABASE"));
         });
+
+        services.AddScoped<ITokenService, TokenService>();
     })
     .Build();
 
