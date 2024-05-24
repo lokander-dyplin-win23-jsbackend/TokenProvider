@@ -40,7 +40,7 @@ namespace TokenProvider.Functions
                 if (string.IsNullOrEmpty(refreshToken))
                     refreshTokenResult = await _tokenService.GetRefreshTokenAsync(refreshToken, cts.Token);
 
-                if (refreshTokenResult == null || refreshTokenResult.ExpiryDate < DateTime.Now.AddDays(1))
+                if (refreshTokenResult.Token == null || refreshTokenResult.ExpiryDate < DateTime.Now.AddDays(1))
                     refreshTokenResult = await _tokenService.GenerateRefreshTokenAsync(tokenRequest.UserId, cts.Token);
 
 
