@@ -37,7 +37,7 @@ namespace TokenProvider.Functions
 
                 req.HttpContext.Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
 
-                if (!string.IsNullOrEmpty(refreshToken))
+                if (string.IsNullOrEmpty(refreshToken))
                     refreshTokenResult = await _tokenService.GetRefreshTokenAsync(refreshToken, cts.Token);
 
                 if (refreshTokenResult == null || refreshTokenResult.ExpiryDate < DateTime.Now.AddDays(1))
